@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+        :root {
+            --bg-light: #f0f0f0;
+            --bg-dark: #1f1c2c;
+            --cell-light: rgba(255,255,255,0.9);
+            --cell-dark: rgba(255,255,255,0.1);
+            --text-light: #000;
+            --text-dark: #fff;
+            --hover-light: rgba(0,0,0,0.1);
+            --hover-dark: rgba(255,255,255,0.2);
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            transition: background 0.5s, color 0.5s;
+        }
+
+        body.light {
+            background: var(--bg-light);
+            color: var(--text-light);
+        }
+
+        body.dark {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            border-radius: 15px;
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: 0.3s;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+        }
+
+        body.light .cell {
+            background: var(--cell-light);
+            border-color: rgba(0,0,0,0.2);
+        }
+
+        body.dark .cell {
+            background: var(--cell-dark);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        body.light .cell:hover {
+            background: var(--hover-light);
+        }
+
+        body.dark .cell:hover {
+            background: var(--hover-dark);
+        }
+
+        .status {
+            margin-top: 20px;
+            font-size: 1.2rem;
+        }
+
+        .buttons {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        #restartBtn {
+            background: #ff4b2b;
+            color: #fff;
+        }
+
+        #restartBtn:hover {
+            background: #ff416c;
+        }
+
+        #themeBtn {
+            background: #4b79a1;
+            color: #fff;
+        }
+
+        #themeBtn:hover {
+            background: #283e51;
+        }
+
+        #aiBtn {
+            background: #00c6ff;
+            color: #000;
+        }
+
+        #aiBtn:hover {
+            background: #0072ff;
+            color: #fff;
+        }
+    </style>
+</head>
+<body class="dark">
+    <div class="container">
+        <h1>Tic Tac Toe</h1>
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <div class="status" id="status">Player X's turn</div>
+        <div class="buttons">
+            <button id="restartBtn">Restart Game</button>
+            <button id="themeBtn">Toggle Dark/Light</button>
+            <button id="aiBtn">Play vs AI: OFF</button>
+        </div>
+    </div>
+
+    <audio id="clickSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+    <audio id="winSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+    <audio id="drawSound" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
+
+    <script>
+        const board = document.getElementById('board');
+        const statusText = document.getElementById('status');
+        const restartBtn = document.getElementById('restartBtn');
+        const themeBtn = document.getElementById('themeBtn');
+        const aiBtn = document.getElementById('aiBtn');
+        const clickSound = document.getElementById('clickSound');
+        const winSound = document.getElementById('winSound');
+        const drawSound = document.getElementById('drawSound');
+
+        let currentPlayer = 'X';
+        let gameState = ["", "", "", "", "", "", "", "", ""];
+        let aiEnabled = false;
+
+        const winningConditions = [
+            [0,1,2],[3,4,5],[6,7,8],
+            [0,3,6],[1,4,7],[2,5,8],
+            [0,4,8],[2,4,6]
+        ];
+
+        function handleCellClick(e) {
+            const clickedCell = e.target;
+            const clickedIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+            if(gameState[clickedIndex] !== "" || checkWinner()) return;
+
+            makeMove(clickedIndex, currentPlayer);
+
+            if(aiEnabled && currentPlayer === 'O' && !checkWinner() && gameState.includes("")) {
+                setTimeout(aiMove, 300);
+            }
+        }
+
+        function makeMove(index, player) {
+            gameState[index] = player;
+            document.querySelector(`.cell[data-index='${index}']`).textContent = player;
+            clickSound.play();
+
+            if(checkWinner()) {
+                statusText.textContent = `Player ${player} wins! 🎉`;
+                winSound.play();
+                return;
+            }
+
+            if(!gameState.includes("")) {
+                statusText.textContent = "It's a draw! 🤝";
+                drawSound.play();
+                return;
+            }
+
+            currentPlayer = player === 'X' ? 'O' : 'X';
+            statusText.textContent = `Player ${currentPlayer}'s turn`;
+        }
+
+        function checkWinner() {
+            for(let condition of winningConditions) {
+                const [a, b, c] = condition;
+                if(gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function restartGame() {
+            gameState = ["", "", "", "", "", "", "", "", ""];
+            currentPlayer = 'X';
+            statusText.textContent = `Player ${currentPlayer}'s turn`;
+            document.querySelectorAll('.cell').forEach(cell => cell.textContent = "");
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark');
+            document.body.classList.toggle('light');
+        }
+
+        function toggleAI() {
+            aiEnabled = !aiEnabled;
+            aiBtn.textContent = `Play vs AI: ${aiEnabled ? "ON" : "OFF"}`;
+            restartGame();
+        }
+
+        function aiMove() {
+            let emptyIndices = gameState.map((val, idx) => val === "" ? idx : null).filter(val => val !== null);
+            const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+            makeMove(randomIndex, 'O');
+        }
+
+        board.addEventListener('click', handleCellClick);
+        restartBtn.addEventListener('click', restartGame);
+        themeBtn.addEventListener('click', toggleTheme);
+        aiBtn.addEventListener('click', toggleAI);
+    </script>
+</body>
+</html>
